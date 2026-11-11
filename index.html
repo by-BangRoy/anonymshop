@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ShoBoost - Shopee Auto Naikkan Produk</title>
+    <meta name="description" content="Aplikasi otomatisasi untuk menaikkan banyak produk Shopee sekaligus tanpa batas langsung ke server Shopee dengan menempel link produk, timer fleksibel 1, 5, 10 menit." />
+    <meta property="og:title" content="ShoBoost - Shopee Auto Naikkan Produk" />
+    <meta property="og:description" content="Aplikasi otomatisasi untuk menaikkan banyak produk Shopee sekaligus tanpa batas langsung ke server Shopee dengan menempel link produk, timer fleksibel 1, 5, 10 menit." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <script>
+      // Gracefully ignore WebSocket / HMR connection errors in AI Studio iframe
+      window.addEventListener('error', function (event) {
+        if (
+          event &&
+          (event.message?.includes('WebSocket') ||
+            event.filename?.includes('@vite/client') ||
+            (typeof event.message === 'string' && event.message.includes('createWebSocketModuleRunnerTransport')))
+        ) {
+          event.stopImmediatePropagation();
+        }
+      });
+      window.addEventListener('unhandledrejection', function (event) {
+        if (event && event.reason && String(event.reason).includes('WebSocket')) {
+          event.stopImmediatePropagation();
+        }
+      });
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
