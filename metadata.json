@@ -1,6 +1,8 @@
 {
-  "name": "ShoBoost - Shopee Auto Naikkan Produk",
-  "description": "Aplikasi otomatisasi untuk menaikkan banyak produk Shopee sekaligus tanpa batas langsung ke server Shopee dengan menempel link produk, timer fleksibel 1, 5, 10 menit.",
+  "name": "BangRoyBoost",
+  "description": "",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
