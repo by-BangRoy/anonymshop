@@ -12,6 +12,7 @@ import {
   ShoapiConfig,
   BoostLogEntry,
 } from './types/shopee';
+import { Layers, Flame, Zap, Globe, Clock, ShieldCheck } from 'lucide-react';
 
 export default function App() {
   const [products, setProducts] = useState<ShopeeProduct[]>([]);
@@ -20,6 +21,7 @@ export default function App() {
     isProduction: true,
     boostIntervalMinutes: 1,
     proxyEnabled: false,
+    proxyMode: 'direct',
     proxyList: [],
     autoBoostEnabled: true,
     notificationSound: true,
@@ -284,6 +286,80 @@ export default function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Dynamic Metrics Overview Bar */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-2xs sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Produk Ditempel
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center">
+                <Layers className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-slate-900">{products.length}</span>
+              <span className="text-2xs text-slate-500 font-medium">Produk</span>
+            </div>
+            <p className="text-2xs text-slate-400 mt-1">Multi-produk tanpa batas</p>
+          </div>
+
+          <div className="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-2xs sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Sedang Naik
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Flame className="w-4 h-4 text-orange-600 animate-bounce" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-orange-600">{activeBoostedCount}</span>
+              <span className="text-2xs text-slate-500 font-medium">
+                ({products.length > 0 ? Math.round((activeBoostedCount / products.length) * 100) : 0}%)
+              </span>
+            </div>
+            <p className="text-2xs text-slate-400 mt-1">Timer live hitung mundur</p>
+          </div>
+
+          <div className="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-2xs sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Total Boost Sukses
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Zap className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl font-black text-emerald-700">{totalBoostsCount}x</span>
+              <span className="text-2xs text-emerald-700 font-semibold px-1.5 py-0.2 rounded bg-emerald-50 border border-emerald-200">
+                Auto Re-Boost
+              </span>
+            </div>
+            <p className="text-2xs text-slate-400 mt-1">Penaikan otomatis 24/7</p>
+          </div>
+
+          <div className="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-2xs sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Koneksi Server Shopee
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Globe className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-lg font-black text-emerald-800">{pingLatencyMs}ms</span>
+              <span className="text-2xs font-bold text-emerald-700 bg-emerald-100/80 border border-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Langsung Terhubung
+              </span>
+            </div>
+            <p className="text-2xs text-slate-500 mt-1">SGW Gateway · 0 Error · shopee.co.id</p>
+          </div>
+        </div>
+
         {/* Section 1: Tempel Link Produk Shopee (Supports Unlimited Multi-Products) */}
         <LinkPaster
           onAddAndBoost={handleAddAndBoost}
@@ -367,17 +443,20 @@ export default function App() {
       {/* Clean quiet footer */}
       <footer className="border-t border-slate-200 bg-white py-4 mt-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-          <div className="flex items-center gap-2">
-            <span>ShoBoost Multi-Produk</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-slate-700">BangRoy Boost SHP</span>
             <span>·</span>
-            <span>Bisa Naikkan Banyak Produk Sekaligus Tanpa Batas</span>
+            <span>Otomasi Multi-Produk Server Shopee</span>
             <span>·</span>
-            <span>Server Shopee.co.id ({pingLatencyMs}ms)</span>
+            <span className="text-emerald-700 flex items-center gap-1 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              shopee.co.id ({pingLatencyMs}ms)
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <span>Interval {config.boostIntervalMinutes} Menit</span>
             <span>·</span>
-            <span>Tanpa Kredensial</span>
+            <span className="text-slate-600 font-medium">Tanpa Kredensial / Login</span>
           </div>
         </div>
       </footer>

@@ -44,33 +44,42 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between py-4 gap-4">
           {/* Logo & Live Mode Banner */}
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-orange-600 flex items-center justify-center text-white shadow-sm shadow-orange-500/20 shrink-0">
-              <Rocket className="w-6 h-6" />
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 flex items-center justify-center text-white shadow-md shadow-orange-500/30 ring-2 ring-orange-200 shrink-0">
+              <Rocket className="w-6 h-6 transform -rotate-12 hover:rotate-0 transition-transform duration-300" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight text-slate-900">
-                  ShoBoost
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-orange-600 via-amber-600 to-slate-900 bg-clip-text text-transparent">
+                  BangRoy Boost SHP
                 </h1>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-orange-100 text-orange-800">
-                  Multi-Produk Tanpa Batas
+                <span className="text-2xs font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-xs">
+                  Pro Multi-Produk
                 </span>
                 {/* Live server connection badge */}
-                <span className="text-xs px-2 py-0.5 rounded font-medium bg-emerald-100 text-emerald-800 flex items-center gap-1.5">
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-800 border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <Globe className="w-3 h-3" />
-                  <span>Server Shopee ({pingLatencyMs}ms)</span>
+                  <Globe className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="font-bold">Terhubung Langsung: shopee.co.id</span>
+                  <span className="text-emerald-700 font-mono text-2xs font-semibold">({pingLatencyMs}ms · SGW)</span>
                 </span>
                 {config.proxyEnabled && (
-                  <span className="text-xs px-2 py-0.5 rounded font-medium bg-blue-100 text-blue-800 flex items-center gap-1">
-                    <Shield className="w-3 h-3" />
-                    <span>Rotasi Proxy ({config.proxyList?.length || 0})</span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1.5 shadow-2xs">
+                    <Shield className="w-3.5 h-3.5 text-blue-600" />
+                    <span>
+                      {config.proxyMode === 'custom'
+                        ? `Proxy Kustom (${config.proxyList?.length || 0})`
+                        : `Auto-Proxy (${config.autoProxyPoolCount || '100+'} Pool)`}
+                    </span>
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Bisa Naikkan Banyak Produk Sekaligus Tanpa Batas · Timer Otomatis {config.boostIntervalMinutes} Menit
+              <p className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+                <span className="text-slate-700 font-medium">Bisa Naikkan Banyak Produk Sekaligus Tanpa Batas</span>
+                <span className="text-slate-300">·</span>
+                <span>Timer Otomatis {config.boostIntervalMinutes} Menit</span>
+                <span className="text-slate-300">·</span>
+                <span className="text-emerald-600 font-medium">Tanpa Kredensial / Login</span>
               </p>
             </div>
           </div>

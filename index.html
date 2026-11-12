@@ -1,34 +1,88 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      (function() {
+        // Suppress Vite HMR / WebSocket connection errors in AI Studio Cloud Run iframe
+        function isViteWsError(err) {
+          if (!err) return false;
+          var str = String(err.message || err.reason || err || '');
+          var stack = String(err.stack || '');
+          return str.includes('WebSocket') ||
+                 str.includes('createWebSocketModuleRunnerTransport') ||
+                 str.includes('closed without opened') ||
+                 stack.includes('@vite/client') ||
+                 stack.includes('createWebSocketModuleRunnerTransport');
+        }
+
+        window.addEventListener('error', function(e) {
+          if (isViteWsError(e) || (e.filename && e.filename.includes('@vite/client'))) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(e) {
+          if (isViteWsError(e.reason)) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+
+        // Intercept WebSocket when requested with 'vite-hmr' protocol to prevent closed error
+        if (typeof window !== 'undefined' && window.WebSocket) {
+          var OrigWebSocket = window.WebSocket;
+          var DummyWebSocket = function(url, protocols) {
+            if (protocols === 'vite-hmr' || (typeof url === 'string' && (url.includes('token=') || url.includes('24678')))) {
+              var handlers = {};
+              var dummy = {
+                readyState: 1, // OPEN
+                OPEN: 1,
+                CLOSED: 3,
+                CLOSING: 2,
+                CONNECTING: 0,
+                send: function() {},
+                close: function() {},
+                addEventListener: function(type, listener) {
+                  if (!handlers[type]) handlers[type] = [];
+                  handlers[type].push(listener);
+                  if (type === 'open') {
+                    setTimeout(listener, 10);
+                  }
+                },
+                removeEventListener: function(type, listener) {
+                  if (handlers[type]) {
+                    handlers[type] = handlers[type].filter(function(l) { return l !== listener; });
+                  }
+                },
+                dispatchEvent: function() { return true; }
+              };
+              return dummy;
+            }
+            return new OrigWebSocket(url, protocols);
+          };
+          DummyWebSocket.prototype = OrigWebSocket.prototype;
+          DummyWebSocket.CONNECTING = 0;
+          DummyWebSocket.OPEN = 1;
+          DummyWebSocket.CLOSING = 2;
+          DummyWebSocket.CLOSED = 3;
+          window.WebSocket = DummyWebSocket;
+        }
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ShoBoost - Shopee Auto Naikkan Produk</title>
-    <meta name="description" content="Aplikasi otomatisasi untuk menaikkan banyak produk Shopee sekaligus tanpa batas langsung ke server Shopee dengan menempel link produk, timer fleksibel 1, 5, 10 menit." />
-    <meta property="og:title" content="ShoBoost - Shopee Auto Naikkan Produk" />
-    <meta property="og:description" content="Aplikasi otomatisasi untuk menaikkan banyak produk Shopee sekaligus tanpa batas langsung ke server Shopee dengan menempel link produk, timer fleksibel 1, 5, 10 menit." />
+    <title>BangRoy Boost SHP - Auto Naikkan Produk Shopee</title>
+    <meta name="description" content="BangRoy Boost SHP - Aplikasi otomatisasi untuk menaikkan banyak produk Shopee sekaligus tanpa batas langsung ke server Shopee dengan timer fleksibel 1, 5, 10 menit." />
+    <meta property="og:title" content="BangRoy Boost SHP - Auto Naikkan Produk Shopee" />
+    <meta property="og:description" content="BangRoy Boost SHP - Aplikasi otomatisasi untuk menaikkan banyak produk Shopee sekaligus tanpa batas langsung ke server Shopee dengan timer fleksibel 1, 5, 10 menit." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
-    <script>
-      // Gracefully ignore WebSocket / HMR connection errors in AI Studio iframe
-      window.addEventListener('error', function (event) {
-        if (
-          event &&
-          (event.message?.includes('WebSocket') ||
-            event.filename?.includes('@vite/client') ||
-            (typeof event.message === 'string' && event.message.includes('createWebSocketModuleRunnerTransport')))
-        ) {
-          event.stopImmediatePropagation();
-        }
-      });
-      window.addEventListener('unhandledrejection', function (event) {
-        if (event && event.reason && String(event.reason).includes('WebSocket')) {
-          event.stopImmediatePropagation();
-        }
-      });
-    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

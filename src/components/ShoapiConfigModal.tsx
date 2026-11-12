@@ -43,9 +43,29 @@ export const ShoapiConfigModal: React.FC<ShoapiConfigModalProps> = ({
     error?: string;
   } | null>(null);
 
+  // Auto proxy pool state
+  const [isRefreshingPool, setIsRefreshingPool] = useState(false);
+  const [autoPoolCount, setAutoPoolCount] = useState<number>(config.autoProxyPoolCount || 25);
+
   // Shopee server live ping state
   const [isPingingShopee, setIsPingingShopee] = useState(false);
   const [currentLatency, setCurrentLatency] = useState<number>(pingLatencyMs);
+
+  const handleRefreshAutoPool = async () => {
+    setIsRefreshingPool(true);
+    try {
+      const res = await fetch('/api/shopee/proxy/auto-refresh', { method: 'POST' });
+      const data = await res.json();
+      if (data.autoProxyPoolCount) {
+        setAutoPoolCount(data.autoProxyPoolCount);
+        setFormData((prev) => ({ ...prev, autoProxyPoolCount: data.autoProxyPoolCount }));
+      }
+    } catch (err) {
+      console.warn('Gagal memuat proxy pool:', err);
+    } finally {
+      setIsRefreshingPool(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -157,7 +177,9 @@ export const ShoapiConfigModal: React.FC<ShoapiConfigModalProps> = ({
             }`}
           >
             <Shield className="w-4 h-4" />
-            <span>Rotasi Proxy ({proxyInput.split('\n').filter((s) => s.trim()).length})</span>
+            <span>
+              Rotasi Proxy ({formData.proxyMode === 'custom' ? `${proxyInput.split('\n').filter((s) => s.trim()).length} Kustom` : formData.proxyMode === 'direct' ? 'Direct' : `${autoPoolCount} Auto`})
+            </span>
           </button>
 
           <button
@@ -262,39 +284,145 @@ export const ShoapiConfigModal: React.FC<ShoapiConfigModalProps> = ({
           {/* TAB 2: Rotating Proxy */}
           {activeTab === 'rotating_proxy' && (
             <div className="space-y-4 text-xs">
-              <div className="flex items-center justify-between p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl">
-                <div>
-                  <h4 className="font-bold text-blue-950 flex items-center gap-1.5">
-                    <Shield className="w-4 h-4 text-blue-600" />
-                    Aktifkan Rotasi Proxy
-                  </h4>
-                  <p className="text-2xs text-blue-800 mt-0.5">
-                    Memutar IP setiap kali mengirim request ke Shopee agar koneksi selalu aman dan lancar.
-                  </p>
+              {/* Proxy Mode Selector: Auto vs Direct vs Custom */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-800">
+                  Mode Rotasi Proxy:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, proxyEnabled: true, proxyMode: 'auto' })}
+                    className={`p-3 rounded-xl border text-left transition-all relative ${
+                      formData.proxyEnabled && (formData.proxyMode === 'auto' || !formData.proxyMode)
+                        ? 'bg-blue-50/90 border-blue-500 ring-1 ring-blue-500'
+                        : 'bg-white border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 text-xs">Otomatis (Bawaan)</span>
+                      {formData.proxyEnabled && (formData.proxyMode === 'auto' || !formData.proxyMode) && (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                      )}
+                    </div>
+                    <div className="text-2xs text-slate-500 mt-1">
+                      Tanpa isi manual, auto pool ratusan proxy
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, proxyEnabled: false, proxyMode: 'direct' })}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      !formData.proxyEnabled || formData.proxyMode === 'direct'
+                        ? 'bg-emerald-50/90 border-emerald-500 ring-1 ring-emerald-500'
+                        : 'bg-white border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 text-xs">Direct Server</span>
+                      {(!formData.proxyEnabled || formData.proxyMode === 'direct') && (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      )}
+                    </div>
+                    <div className="text-2xs text-slate-500 mt-1">
+                      Langsung ke shopee.co.id tanpa proxy
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, proxyEnabled: true, proxyMode: 'custom' })}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      formData.proxyEnabled && formData.proxyMode === 'custom'
+                        ? 'bg-orange-50/90 border-orange-500 ring-1 ring-orange-500'
+                        : 'bg-white border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 text-xs">Kustom Manual</span>
+                      {formData.proxyEnabled && formData.proxyMode === 'custom' && (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-orange-600" />
+                      )}
+                    </div>
+                    <div className="text-2xs text-slate-500 mt-1">
+                      Ketik daftar proxy pribadi sendiri
+                    </div>
+                  </button>
                 </div>
-                <input
-                  type="checkbox"
-                  checked={formData.proxyEnabled}
-                  onChange={(e) => setFormData({ ...formData, proxyEnabled: e.target.checked })}
-                  className="w-4 h-4 accent-orange-600 cursor-pointer"
-                />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-800 mb-1">
-                  Daftar Alamat Proxy (Satu proxy per baris):
-                </label>
-                <textarea
-                  rows={5}
-                  value={proxyInput}
-                  onChange={(e) => setProxyInput(e.target.value)}
-                  placeholder={`http://user:pass@proxy1.example.com:8080\nhttp://user:pass@proxy2.example.com:8080\nhttp://123.45.67.89:3128`}
-                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
-                />
-                <p className="text-2xs text-slate-500 mt-1">
-                  Format: <code>http://host:port</code> atau <code>http://user:pass@host:port</code>. Sistem akan menggilir proxy secara round-robin pada setiap request booster.
-                </p>
-              </div>
+              {/* AUTO PROXY ACTIVE CARD */}
+              {formData.proxyEnabled && (formData.proxyMode === 'auto' || !formData.proxyMode) && (
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50/60 border border-blue-200 rounded-xl space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                        <h4 className="font-bold text-blue-950 text-xs flex items-center gap-1.5">
+                          <Shield className="w-4 h-4 text-blue-600" />
+                          Rotasi Proxy Otomatis Aktif
+                        </h4>
+                        <span className="text-2xs font-extrabold px-2 py-0.5 rounded-full bg-blue-200/70 text-blue-800">
+                          {autoPoolCount} Proxy Tersedia
+                        </span>
+                      </div>
+                      <p className="text-2xs text-blue-900 leading-relaxed">
+                        Sistem otomatis mengunduh dan merotasi ratusan proxy publik aktif setiap request tanpa Anda perlu mengisi manual.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleRefreshAutoPool}
+                      disabled={isRefreshingPool}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-2xs shrink-0"
+                    >
+                      <RotateCw className={`w-3.5 h-3.5 ${isRefreshingPool ? 'animate-spin' : ''}`} />
+                      <span>{isRefreshingPool ? 'Memperbarui...' : 'Perbarui Pool'}</span>
+                    </button>
+                  </div>
+
+                  <div className="p-2.5 bg-white/80 rounded-lg border border-blue-100 flex items-center justify-between text-2xs text-blue-800">
+                    <span>
+                      Proxy Sedang Aktif: <strong className="font-mono text-blue-950">{formData.activeProxy || 'Rotasi Otomatis Round-Robin'}</strong>
+                    </span>
+                    <span className="text-emerald-700 font-medium">Smart Auto-Failover Aktif</span>
+                  </div>
+                </div>
+              )}
+
+              {/* CUSTOM PROXY INPUT (ONLY SHOWN IN CUSTOM MODE) */}
+              {formData.proxyEnabled && formData.proxyMode === 'custom' && (
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-800">
+                    Daftar Alamat Proxy Kustom (Satu proxy per baris):
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={proxyInput}
+                    onChange={(e) => setProxyInput(e.target.value)}
+                    placeholder={`http://user:pass@proxy1.example.com:8080\nhttp://123.45.67.89:3128`}
+                    className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                  <p className="text-2xs text-slate-500">
+                    Format: <code>http://host:port</code> atau <code>http://user:pass@host:port</code>.
+                  </p>
+                </div>
+              )}
+
+              {/* DIRECT SERVER NOTE */}
+              {(!formData.proxyEnabled || formData.proxyMode === 'direct') && (
+                <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1">
+                  <h5 className="font-bold text-emerald-950 flex items-center gap-1.5">
+                    <Globe className="w-4 h-4 text-emerald-600" />
+                    Koneksi Langsung ke Shopee.co.id
+                  </h5>
+                  <p className="text-2xs text-emerald-800 leading-relaxed">
+                    Setiap aksi booster produk akan langsung terhubung ke gateway Shopee tanpa perantara IP lain. Lebih cepat dan latensi minimal.
+                  </p>
+                </div>
+              )}
 
               {/* Test Proxy connection box */}
               <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
@@ -306,7 +434,7 @@ export const ShoapiConfigModal: React.FC<ShoapiConfigModalProps> = ({
                     type="button"
                     onClick={handleTestProxy}
                     disabled={isTestingProxy}
-                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-md text-xs font-semibold flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-2xs"
                   >
                     <RotateCw className={`w-3 h-3 ${isTestingProxy ? 'animate-spin' : ''}`} />
                     <span>{isTestingProxy ? 'Menguji...' : 'Tes Proxy Sekarang'}</span>
@@ -317,8 +445,8 @@ export const ShoapiConfigModal: React.FC<ShoapiConfigModalProps> = ({
                   type="text"
                   value={proxyTestInput}
                   onChange={(e) => setProxyTestInput(e.target.value)}
-                  placeholder="Masukkan proxy spesifik untuk dites (atau kosongkan untuk tes proxy pertama di daftar)"
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-md text-xs font-mono"
+                  placeholder="Masukkan proxy spesifik untuk dites (atau kosongkan untuk tes proxy otomatis saat ini)"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-md text-xs font-mono placeholder:text-slate-400"
                 />
 
                 {proxyTestResult && (

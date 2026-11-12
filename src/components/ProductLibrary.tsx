@@ -189,8 +189,8 @@ export const ProductLibrary: React.FC<ProductLibraryProps> = ({
                     {product.lastProxyUsed && (
                       <>
                         <span>·</span>
-                        <span className="text-2xs text-blue-700 font-mono flex items-center gap-0.5">
-                          <Shield className="w-2.5 h-2.5" />
+                        <span className="text-2xs text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded font-mono flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                           {product.lastProxyUsed}
                         </span>
                       </>

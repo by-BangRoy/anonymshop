@@ -81,9 +81,11 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, onClearLogs })
                     <span className="text-2xs font-mono text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded">
                       ID: {entry.itemId}
                     </span>
-                    <span className="text-2xs font-semibold px-2 py-0.2 rounded bg-orange-100 text-orange-800">
-                      Slot {entry.slotNumber}
-                    </span>
+                    {typeof entry.slotNumber === 'number' && (
+                      <span className="text-2xs font-semibold px-2 py-0.2 rounded bg-orange-100 text-orange-800">
+                        Slot {entry.slotNumber}
+                      </span>
+                    )}
                     <span
                       className={`text-2xs px-2 py-0.2 rounded font-medium ${
                         entry.source === 'auto'
@@ -91,11 +93,11 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, onClearLogs })
                           : 'bg-blue-100 text-blue-800'
                       }`}
                     >
-                      {entry.source === 'auto' ? 'Auto-Loop 4 Jam' : 'Manual Trigger'}
+                      {entry.source === 'auto' ? 'Auto-Boost' : 'Manual Trigger'}
                     </span>
                     {entry.proxyUsed && (
-                      <span className="text-2xs px-1.5 py-0.2 rounded font-mono bg-blue-50 text-blue-700 flex items-center gap-0.5">
-                        <Shield className="w-2.5 h-2.5" />
+                      <span className="text-2xs px-1.5 py-0.2 rounded font-mono bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-0.5">
+                        <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
                         {entry.proxyUsed}
                       </span>
                     )}

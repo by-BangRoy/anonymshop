@@ -1,6 +1,6 @@
 {
   "name": "BangRoyBoost",
-  "description": "",
+  "description": "BangRoy Boost SHP - Aplikasi otomatisasi untuk menaikkan banyak produk Shopee sekaligus tanpa batas langsung ke server Shopee dengan timer fleksibel 1, 5, 10 menit.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

@@ -55,7 +55,7 @@ export const ShopeeGuideModal: React.FC<ShopeeGuideModalProps> = ({ isOpen, onCl
             </h4>
             <ul className="space-y-1.5 list-disc pl-4 text-slate-700">
               <li>
-                <strong>Multi-Produk Tanpa Batas:</strong> ShoBoost kini mendukung penaikan banyak produk secara bersamaan (tidak dibatasi 5 produk) dengan timer masing-masing produk berjalan serentak.
+                <strong>Multi-Produk Tanpa Batas:</strong> BangRoy Boost SHP kini mendukung penaikan banyak produk secara bersamaan (tidak dibatasi 5 produk) dengan timer masing-masing produk berjalan serentak.
               </li>
               <li>
                 <strong>Interval Fleksibel:</strong> Anda dapat memilih interval dorongan 1 Menit (sangat cepat), 5 Menit, atau 10 Menit sesuai kebutuhan traffic toko.
@@ -70,15 +70,15 @@ export const ShopeeGuideModal: React.FC<ShopeeGuideModalProps> = ({ isOpen, onCl
           <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
             <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-emerald-600" />
-              Mengapa Perlu Otomatisasi (ShoBoost)?
+              Mengapa Perlu Otomatisasi (BangRoy Boost SHP)?
             </h4>
             <p>
-              Dengan <strong>ShoBoost</strong>:
+              Dengan <strong>BangRoy Boost SHP</strong>:
             </p>
             <ul className="space-y-1 list-disc pl-4 text-slate-600">
               <li>Timer 1, 5, atau 10 menit dihitung secara presisi secara real-time.</li>
               <li>Sistem auto-boost otomatis memicu panggilan ShoAPI / Shopee server kembali tepat saat waktu habis (24 jam 7 hari).</li>
-              <li>Jika Anda memiliki lebih dari 5 produk, Anda bisa mengaktifkan mode rotasi antrean untuk menggilir produk.</li>
+              <li>Bisa menaikkan puluhan hingga ratusan link produk sekaligus tanpa terkendala kuota slot.</li>
             </ul>
           </div>
 

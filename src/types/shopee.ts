@@ -36,7 +36,9 @@ export interface ShoapiConfig {
   isProduction: boolean;
   boostIntervalMinutes: 1 | 5 | 10 | number;
   proxyEnabled: boolean;
+  proxyMode?: 'auto' | 'custom' | 'direct';
   proxyList: string[];
+  autoProxyPoolCount?: number;
   activeProxy?: string;
   autoBoostEnabled: boolean;
   notificationSound: boolean;

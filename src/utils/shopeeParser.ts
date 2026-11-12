@@ -5,11 +5,13 @@ import { ParsedLinkResult } from '../types/shopee';
  */
 function cleanSlug(slug: string): string {
   if (!slug) return 'Produk Shopee';
-  return slug
-    .replace(/-i\.\d+\.\d+$/, '')
+  const cleaned = slug
+    .replace(/-i\.\d+\.\d+.*$/, '')
     .replace(/[-_]+/g, ' ')
+    .replace(/^\s*-\s*/, '')
     .replace(/\b\w/g, (char) => char.toUpperCase())
     .trim();
+  return cleaned || 'Produk Shopee';
 }
 
 /**
@@ -29,13 +31,19 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
       const itemId = parseInt(standardMatch[2], 10);
       
       // Extract title from slug if present
-      let title = 'Produk Shopee';
-      const urlObj = input.startsWith('http') ? new URL(input) : null;
-      if (urlObj) {
+      let title = '';
+      try {
+        const urlObj = input.startsWith('http') ? new URL(input) : new URL(`https://shopee.co.id/${input}`);
         const pathSegments = urlObj.pathname.split('/').filter(Boolean);
         if (pathSegments.length > 0) {
-          const lastSegment = decodeURIComponent(pathSegments[0] || '');
-          title = cleanSlug(lastSegment);
+          const firstSegment = decodeURIComponent(pathSegments[0] || '');
+          title = cleanSlug(firstSegment);
+        }
+      } catch {
+        const pathOnly = input.split('?')[0].split('#')[0];
+        const match = pathOnly.match(/\/([^\/]+)-i\.\d+\.\d+/);
+        if (match && match[1]) {
+          title = cleanSlug(decodeURIComponent(match[1]));
         }
       }
 
@@ -43,9 +51,9 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
         valid: true,
         shopId,
         itemId,
-        name: title || `Produk #${itemId}`,
+        name: title && title !== 'Produk Shopee' ? title : `Produk Shopee #${itemId}`,
         originalUrl: input.startsWith('http') ? input : `https://shopee.co.id/product/${shopId}/${itemId}`,
-        domain: urlObj?.hostname || 'shopee.co.id',
+        domain: 'shopee.co.id',
       };
     }
 
