@@ -33,7 +33,7 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
       // Extract title from slug if present
       let title = '';
       try {
-        const urlObj = input.startsWith('http') ? new URL(input) : new URL(`https://shopee.co.id/${input}`);
+        const urlObj = input.startsWith('http') ? new URL(input) : new URL(`https://www.shopee.co.id/${input}`);
         const pathSegments = urlObj.pathname.split('/').filter(Boolean);
         if (pathSegments.length > 0) {
           const firstSegment = decodeURIComponent(pathSegments[0] || '');
@@ -52,8 +52,8 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
         shopId,
         itemId,
         name: title && title !== 'Produk Shopee' ? title : `Produk Shopee #${itemId}`,
-        originalUrl: input.startsWith('http') ? input : `https://shopee.co.id/product/${shopId}/${itemId}`,
-        domain: 'shopee.co.id',
+        originalUrl: input.startsWith('http') ? input : `https://www.shopee.co.id/product/${shopId}/${itemId}`,
+        domain: 'www.shopee.co.id',
       };
     }
 
@@ -67,8 +67,8 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
         shopId,
         itemId,
         name: `Produk Shopee #${itemId}`,
-        originalUrl: input.startsWith('http') ? input : `https://shopee.co.id/product/${shopId}/${itemId}`,
-        domain: 'shopee.co.id',
+        originalUrl: input.startsWith('http') ? input : `https://www.shopee.co.id/product/${shopId}/${itemId}`,
+        domain: 'www.shopee.co.id',
       };
     }
 
@@ -85,7 +85,7 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
           itemId,
           name: `Produk Shopee #${itemId}`,
           originalUrl: input,
-          domain: 'shopee.co.id',
+          domain: 'www.shopee.co.id',
         };
       }
     }
@@ -100,8 +100,8 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
         shopId,
         itemId,
         name: `Produk #${itemId}`,
-        originalUrl: `https://shopee.co.id/product/${shopId}/${itemId}`,
-        domain: 'shopee.co.id',
+        originalUrl: `https://www.shopee.co.id/product/${shopId}/${itemId}`,
+        domain: 'www.shopee.co.id',
       };
     }
 
@@ -127,7 +127,7 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
     return {
       valid: false,
       originalUrl: input,
-      error: 'Format link tidak dikenali. Gunakan format shopee.co.id/...-i.SHOP_ID.ITEM_ID atau /product/SHOP_ID/ITEM_ID',
+      error: 'Format link tidak dikenali. Gunakan format www.shopee.co.id/...-i.SHOP_ID.ITEM_ID atau /product/SHOP_ID/ITEM_ID',
     };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : 'Gagal memproses link';

@@ -29,6 +29,9 @@ export default function App() {
   });
 
   const [pingLatencyMs, setPingLatencyMs] = useState(85);
+  const [isConnected, setIsConnected] = useState(true);
+  const [serverGateway, setServerGateway] = useState('SGW');
+  const [lastHttpStatus, setLastHttpStatus] = useState(200);
   const [totalBoostsCount, setTotalBoostsCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -50,7 +53,17 @@ export default function App() {
       if (typeof data.pingLatencyMs === 'number') {
         setPingLatencyMs(data.pingLatencyMs);
       }
+      if (typeof data.connected === 'boolean') {
+        setIsConnected(data.connected);
+      }
+      if (typeof data.gateway === 'string' && data.gateway) {
+        setServerGateway(data.gateway);
+      }
+      if (typeof data.httpStatus === 'number') {
+        setLastHttpStatus(data.httpStatus);
+      }
     } catch (err) {
+      setIsConnected(false);
       console.warn('Gagal sinkronisasi data server:', err);
     }
   }, []);
@@ -282,6 +295,8 @@ export default function App() {
         productsCount={products.length}
         activeBoostedCount={activeBoostedCount}
         pingLatencyMs={pingLatencyMs}
+        connected={isConnected}
+        gateway={serverGateway}
       />
 
       {/* Main Container */}
@@ -345,18 +360,36 @@ export default function App() {
               <span className="text-2xs sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Koneksi Server Shopee
               </span>
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <div
+                className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  isConnected ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                }`}
+              >
                 <Globe className="w-4 h-4" />
               </div>
             </div>
             <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-lg font-black text-emerald-800">{pingLatencyMs}ms</span>
-              <span className="text-2xs font-bold text-emerald-700 bg-emerald-100/80 border border-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Langsung Terhubung
+              <span className={`text-lg font-black ${isConnected ? 'text-emerald-800' : 'text-amber-800'}`}>
+                {pingLatencyMs}ms
+              </span>
+              <span
+                className={`text-2xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border ${
+                  isConnected
+                    ? 'text-emerald-700 bg-emerald-100/80 border-emerald-300'
+                    : 'text-amber-700 bg-amber-100/80 border-amber-300'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+                  }`}
+                />
+                {isConnected ? 'Terhubung' : 'Koneksi Terputus'}
               </span>
             </div>
-            <p className="text-2xs text-slate-500 mt-1">SGW Gateway · 0 Error · shopee.co.id</p>
+            <p className="text-2xs text-slate-500 mt-1">
+              {serverGateway} Gateway · HTTP {lastHttpStatus} · www.shopee.co.id
+            </p>
           </div>
         </div>
 
@@ -448,9 +481,9 @@ export default function App() {
             <span>·</span>
             <span>Otomasi Multi-Produk Server Shopee</span>
             <span>·</span>
-            <span className="text-emerald-700 flex items-center gap-1 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              shopee.co.id ({pingLatencyMs}ms)
+            <span className={`${isConnected ? 'text-emerald-700' : 'text-amber-700'} flex items-center gap-1 font-medium`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              www.shopee.co.id ({pingLatencyMs}ms)
             </span>
           </div>
           <div className="flex items-center gap-3">

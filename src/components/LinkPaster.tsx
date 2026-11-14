@@ -256,7 +256,7 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Tempel link produk Shopee, contoh: https://shopee.co.id/Nama-Produk-i.104928172.2391029381"
+                placeholder="Tempel link produk Shopee, contoh: https://www.shopee.co.id/Nama-Produk-i.104928172.2391029381"
                 className="w-full pl-10 pr-24 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow"
               />
               <button
@@ -358,7 +358,7 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
                 rows={5}
                 value={batchValue}
                 onChange={(e) => setBatchValue(e.target.value)}
-                placeholder="https://shopee.co.id/...-i.12345.67890&#10;https://shopee.co.id/...-i.12345.67891&#10;https://shopee.co.id/...-i.12345.67892&#10;https://shopee.co.id/...-i.12345.67893&#10;https://shopee.co.id/...-i.12345.67894&#10;https://shopee.co.id/...-i.12345.67895&#10;https://shopee.co.id/...-i.12345.67896"
+                placeholder="https://www.shopee.co.id/...-i.12345.67890&#10;https://www.shopee.co.id/...-i.12345.67891&#10;https://www.shopee.co.id/...-i.12345.67892&#10;https://www.shopee.co.id/...-i.12345.67893&#10;https://www.shopee.co.id/...-i.12345.67894&#10;https://www.shopee.co.id/...-i.12345.67895&#10;https://www.shopee.co.id/...-i.12345.67896"
                 className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
             </div>

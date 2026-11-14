@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Globe,
@@ -50,6 +50,17 @@ export const ShoapiConfigModal: React.FC<ShoapiConfigModalProps> = ({
   // Shopee server live ping state
   const [isPingingShopee, setIsPingingShopee] = useState(false);
   const [currentLatency, setCurrentLatency] = useState<number>(pingLatencyMs);
+  const [serverConnected, setServerConnected] = useState<boolean>(true);
+  const [serverHttpStatus, setServerHttpStatus] = useState<number>(200);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({ ...config });
+      setProxyInput((config.proxyList || []).join('\n'));
+      setAutoPoolCount(config.autoProxyPoolCount || 25);
+      setCurrentLatency(pingLatencyMs);
+    }
+  }, [isOpen, config, pingLatencyMs]);
 
   const handleRefreshAutoPool = async () => {
     setIsRefreshingPool(true);
@@ -116,9 +127,17 @@ export const ShoapiConfigModal: React.FC<ShoapiConfigModalProps> = ({
     try {
       const res = await fetch('/api/shopee/ping');
       const data = await res.json();
-      if (data.latencyMs) {
+      if (typeof data.latencyMs === 'number') {
         setCurrentLatency(data.latencyMs);
       }
+      if (typeof data.connected === 'boolean') {
+        setServerConnected(data.connected);
+      }
+      if (typeof data.httpStatus === 'number') {
+        setServerHttpStatus(data.httpStatus);
+      }
+    } catch {
+      setServerConnected(false);
     } finally {
       setIsPingingShopee(false);
     }
@@ -209,15 +228,39 @@ export const ShoapiConfigModal: React.FC<ShoapiConfigModalProps> = ({
           {activeTab === 'interval' && (
             <div className="space-y-4 text-xs">
               {/* Server Live Heartbeat Card */}
-              <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl flex items-center justify-between">
+              <div
+                className={`p-3.5 border rounded-xl flex items-center justify-between ${
+                  serverConnected
+                    ? 'bg-emerald-50/80 border-emerald-200'
+                    : 'bg-amber-50/80 border-amber-200'
+                }`}
+              >
                 <div className="flex items-center gap-2.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                  <div
+                    className={`w-2.5 h-2.5 rounded-full ${
+                      serverConnected ? 'bg-emerald-500 animate-ping' : 'bg-amber-500'
+                    }`}
+                  />
                   <div>
-                    <h4 className="font-bold text-emerald-950 flex items-center gap-1.5">
-                      <Globe className="w-4 h-4 text-emerald-600" />
-                      Status Server: Terhubung ke Shopee.co.id
+                    <h4
+                      className={`font-bold flex items-center gap-1.5 ${
+                        serverConnected ? 'text-emerald-950' : 'text-amber-950'
+                      }`}
+                    >
+                      <Globe
+                        className={`w-4 h-4 ${
+                          serverConnected ? 'text-emerald-600' : 'text-amber-600'
+                        }`}
+                      />
+                      {serverConnected
+                        ? `Status Server: Terhubung ke www.shopee.co.id (HTTP ${serverHttpStatus})`
+                        : 'Status Server: Menghubungkan ke www.shopee.co.id...'}
                     </h4>
-                    <p className="text-2xs text-emerald-800 mt-0.5">
+                    <p
+                      className={`text-2xs mt-0.5 ${
+                        serverConnected ? 'text-emerald-800' : 'text-amber-800'
+                      }`}
+                    >
                       Sistem aktif mengirim keep-alive ping secara otomatis tanpa perlu login atau kredensial.
                     </p>
                   </div>
@@ -326,7 +369,7 @@ export const ShoapiConfigModal: React.FC<ShoapiConfigModalProps> = ({
                       )}
                     </div>
                     <div className="text-2xs text-slate-500 mt-1">
-                      Langsung ke shopee.co.id tanpa proxy
+                      Langsung ke www.shopee.co.id tanpa proxy
                     </div>
                   </button>
 
@@ -416,7 +459,7 @@ export const ShoapiConfigModal: React.FC<ShoapiConfigModalProps> = ({
                 <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1">
                   <h5 className="font-bold text-emerald-950 flex items-center gap-1.5">
                     <Globe className="w-4 h-4 text-emerald-600" />
-                    Koneksi Langsung ke Shopee.co.id
+                    Koneksi Langsung ke www.shopee.co.id
                   </h5>
                   <p className="text-2xs text-emerald-800 leading-relaxed">
                     Setiap aksi booster produk akan langsung terhubung ke gateway Shopee tanpa perantara IP lain. Lebih cepat dan latensi minimal.

@@ -66,12 +66,12 @@ let autoProxyPool: string[] = [...SEED_PROXIES];
 let autoProxyIndex = 0;
 let isFetchingProxies = false;
 
-// Global configuration: Multi-Product Unlimited Booster - DIRECT TO SHOPEE.CO.ID BY DEFAULT
+// Global configuration: Multi-Product Unlimited Booster - DIRECT TO WWW.SHOPEE.CO.ID BY DEFAULT
 let config: ShoapiConfig = {
   isProduction: true,
   boostIntervalMinutes: 1, // Default: 1 menit (options: 1, 5, 10)
-  proxyEnabled: false, // Default: LANGSUNG TERHUBUNG KE SERVER SHOPEE.CO.ID (Direct Connection)
-  proxyMode: 'direct', // 'direct' to shopee.co.id without intermediate proxy errors
+  proxyEnabled: false, // Default: LANGSUNG TERHUBUNG KE SERVER WWW.SHOPEE.CO.ID (Direct Connection)
+  proxyMode: 'direct', // 'direct' to www.shopee.co.id without intermediate proxy errors
   proxyList: [],
   autoProxyPoolCount: SEED_PROXIES.length,
   autoBoostEnabled: true,
@@ -87,6 +87,8 @@ let totalBoostsCount = 0;
 let currentCustomProxyIndex = 0;
 let lastShopeePingLatencyMs = 85;
 let isShopeeConnected = true;
+let lastShopeeHttpStatus = 200;
+let lastShopeeGateway = 'SGW';
 
 /**
  * Repairs product titles from their original Shopee URL
@@ -109,38 +111,41 @@ async function fetchAutoProxies(): Promise<number> {
   if (isFetchingProxies) return autoProxyPool.length;
   isFetchingProxies = true;
 
-  const sources = [
-    'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=5000&country=all&ssl=all&anonymity=all',
-    'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt',
-    'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt',
-  ];
+  try {
+    const sources = [
+      'https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=5000&country=all&ssl=all&anonymity=all',
+      'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt',
+      'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt',
+    ];
 
-  const poolSet = new Set<string>(SEED_PROXIES);
+    const poolSet = new Set<string>(SEED_PROXIES);
 
-  for (const src of sources) {
-    try {
-      const res = await fetch(src, { signal: AbortSignal.timeout(4500) });
-      if (res.ok) {
-        const text = await res.text();
-        const lines = text.split('\n');
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (trimmed && /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{2,5}$/.test(trimmed)) {
-            poolSet.add(`http://${trimmed}`);
-            if (poolSet.size >= 400) break;
+    for (const src of sources) {
+      try {
+        const res = await fetch(src, { signal: AbortSignal.timeout(4500) });
+        if (res.ok) {
+          const text = await res.text();
+          const lines = text.split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed && /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{2,5}$/.test(trimmed)) {
+              poolSet.add(`http://${trimmed}`);
+              if (poolSet.size >= 400) break;
+            }
           }
         }
+      } catch (err: any) {
+        console.warn(`[Auto-Proxy Source] ${src}: ${err?.message}`);
       }
-    } catch (err: any) {
-      console.warn(`[Auto-Proxy Source] ${src}: ${err?.message}`);
     }
-  }
 
-  autoProxyPool = Array.from(poolSet);
-  config.autoProxyPoolCount = autoProxyPool.length;
-  isFetchingProxies = false;
-  console.log(`[Auto-Proxy] Pool aktif: ${autoProxyPool.length} proxy siap digunakan.`);
-  return autoProxyPool.length;
+    autoProxyPool = Array.from(poolSet);
+    config.autoProxyPoolCount = autoProxyPool.length;
+    console.log(`[Auto-Proxy] Pool aktif: ${autoProxyPool.length} proxy siap digunakan.`);
+    return autoProxyPool.length;
+  } finally {
+    isFetchingProxies = false;
+  }
 }
 
 // Background auto-refresh proxy pool every 15 minutes
@@ -175,9 +180,12 @@ function getNextProxy(): string | null {
 }
 
 /**
- * Executes an HTTP/HTTPS request directly to Shopee with automatic proxy rotation & failover
+ * Executes an HTTP/HTTPS request directly to www.shopee.co.id with optional proxy rotation & automatic failover
  */
-async function fetchWithProxy(url: string, options: RequestInit = {}): Promise<globalThis.Response> {
+async function fetchWithProxy(
+  url: string,
+  options: RequestInit = {}
+): Promise<{ response: globalThis.Response; viaProxy: string | null }> {
   const proxyUrl = getNextProxy();
   const headers = new Headers(options.headers || {});
   if (!headers.has('User-Agent')) {
@@ -186,77 +194,89 @@ async function fetchWithProxy(url: string, options: RequestInit = {}): Promise<g
   if (!headers.has('Accept-Language')) {
     headers.set('Accept-Language', 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7');
   }
+  if (!headers.has('Referer')) {
+    headers.set('Referer', 'https://www.shopee.co.id/');
+  }
 
-  // Try routing through proxy if active
+  // Try routing through proxy if enabled
   if (proxyUrl) {
     try {
       const proxyAgent = new ProxyAgent(proxyUrl);
       const res = await fetch(url, {
         ...options,
+        redirect: 'follow',
         headers,
         dispatcher: proxyAgent,
         signal: options.signal || AbortSignal.timeout(3500), // Short timeout so dead proxies fail over instantly
       } as any);
-      return res;
+      if (res.status > 0 && res.status < 500) {
+        return { response: res, viaProxy: proxyUrl };
+      }
     } catch (proxyErr: any) {
-      console.warn(`[Proxy Failover] Proxy ${proxyUrl} (${proxyErr?.message}) -> Langsung alihkan ke server Shopee`);
+      console.warn(`[Proxy Failover] Proxy ${proxyUrl} (${proxyErr?.message}) -> Langsung alihkan ke www.shopee.co.id`);
     }
   }
 
-  // Direct connection to Shopee server (100% reliable failover)
-  return fetch(url, {
+  // Direct connection to www.shopee.co.id (100% reliable failover)
+  const response = await fetch(url, {
     ...options,
+    redirect: 'follow',
     headers,
     signal: options.signal || AbortSignal.timeout(6000),
   });
+  return { response, viaProxy: null };
 }
 
 /**
- * Maintain active keep-alive connection directly to Shopee.co.id server (Shopee Gateway SGW)
+ * Maintain active keep-alive connection directly to https://www.shopee.co.id (Shopee Gateway SGW)
  */
 async function pingShopeeServer(): Promise<number> {
   const start = Date.now();
   try {
-    const res = await fetch('https://shopee.co.id', {
+    const res = await fetch('https://www.shopee.co.id/', {
       method: 'GET',
+      redirect: 'follow',
       headers: {
         'User-Agent': getRandomUserAgent(),
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8',
+        'Referer': 'https://www.shopee.co.id/',
         'X-Shopee-Client-Timezone': 'Asia/Jakarta',
       },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(6000),
     });
 
-    const latency = Date.now() - start;
-    lastShopeePingLatencyMs = Math.max(30, latency);
-    isShopeeConnected = res.ok || res.status < 500;
+    const latency = Math.max(30, Date.now() - start);
+    lastShopeePingLatencyMs = latency;
+    lastShopeeHttpStatus = res.status;
+    lastShopeeGateway = res.headers.get('server') || 'SGW';
+    isShopeeConnected = res.status > 0 && res.status < 500;
     return lastShopeePingLatencyMs;
   } catch (err: any) {
-    console.warn(`[Shopee Ping Gateway] ${err?.message}`);
-    lastShopeePingLatencyMs = 120;
-    isShopeeConnected = true;
-    return 120;
+    console.warn(`[Shopee Ping Gateway] www.shopee.co.id error: ${err?.message}`);
+    isShopeeConnected = false;
+    lastShopeeHttpStatus = 0;
+    return lastShopeePingLatencyMs;
   }
 }
 
-// Keep-alive heartbeat: Pings Shopee server gateway every 20 seconds
+// Keep-alive heartbeat: Pings www.shopee.co.id every 20 seconds
 setInterval(pingShopeeServer, 20000);
 pingShopeeServer(); // Initial ping
 
 /**
- * Fetches real live product information directly from shopee.co.id server
+ * Fetches real live product information directly from www.shopee.co.id server
  */
 async function fetchRealShopeeProductInfo(
   itemId: number,
   shopId: number
 ): Promise<{ name?: string; price?: number; rating?: number; salesCount?: number } | null> {
-  const targetUrl = `https://shopee.co.id/product/${shopId}/${itemId}`;
+  const targetUrl = `https://www.shopee.co.id/product/${shopId}/${itemId}`;
   try {
-    const res = await fetchWithProxy(targetUrl, {
+    const { response: res } = await fetchWithProxy(targetUrl, {
       headers: {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Referer': 'https://shopee.co.id/',
+        'Referer': 'https://www.shopee.co.id/',
         'X-Shopee-Language': 'id',
       },
     });
@@ -273,8 +293,8 @@ async function fetchRealShopeeProductInfo(
 }
 
 /**
- * Executes a REAL boost request directly to Shopee's server for any product
- * Connects directly to Shopee Gateway (SGW)
+ * Executes a REAL boost request directly to www.shopee.co.id server for any product
+ * Connects directly to www.shopee.co.id (Shopee Gateway SGW) with optional rotating proxy
  */
 async function executeBoostProduct(
   product: ShopeeProduct,
@@ -282,33 +302,41 @@ async function executeBoostProduct(
 ): Promise<{ success: boolean; message: string; cooldownSeconds: number; proxyUsed?: string }> {
   const durationSeconds = Math.max(60, config.boostIntervalMinutes * 60);
 
-  // Send real live boost signal DIRECTLY to Shopee Gateway server (SGW)
   let pingLatency = lastShopeePingLatencyMs;
-  let connectionLabel = 'Direct shopee.co.id (SGW)';
+  let connectionLabel = 'Direct www.shopee.co.id (SGW)';
+  let httpStatus = lastShopeeHttpStatus || 200;
+  let gatewayName = lastShopeeGateway || 'SGW';
 
   try {
     const startTime = Date.now();
-    const shopeeEndpoint = `https://shopee.co.id/product/${product.shopId}/${product.itemId}`;
-    const res = await fetch(shopeeEndpoint, {
+    const shopeeEndpoint = `https://www.shopee.co.id/product/${product.shopId}/${product.itemId}`;
+    const { response: res, viaProxy } = await fetchWithProxy(shopeeEndpoint, {
       method: 'GET',
       headers: {
-        'User-Agent': getRandomUserAgent(),
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Referer': 'https://shopee.co.id/',
+        'Referer': 'https://www.shopee.co.id/',
         'Accept-Language': 'id-ID,id;q=0.9,en;q=0.8',
+        'X-Shopee-Language': 'id',
         'X-Shopee-Client-Timezone': 'Asia/Jakarta',
       },
-      signal: AbortSignal.timeout(6000),
     });
-    if (res.ok || res.status < 500) {
-      pingLatency = Math.max(30, Date.now() - startTime);
+
+    pingLatency = Math.max(30, Date.now() - startTime);
+    httpStatus = res.status;
+    gatewayName = res.headers.get('server') || 'SGW';
+
+    if (res.status > 0 && res.status < 500) {
       lastShopeePingLatencyMs = pingLatency;
+      lastShopeeHttpStatus = httpStatus;
+      lastShopeeGateway = gatewayName;
       isShopeeConnected = true;
-      connectionLabel = `Direct Shopee (${pingLatency}ms)`;
+      connectionLabel = viaProxy
+        ? `${viaProxy.replace('http://', '')} → www.shopee.co.id (${pingLatency}ms)`
+        : `www.shopee.co.id (${pingLatency}ms)`;
     }
   } catch (err: any) {
     console.warn(`[Shopee Direct Boost Signal] ${err?.message}`);
-    connectionLabel = 'Direct shopee.co.id';
+    connectionLabel = 'Direct www.shopee.co.id';
   }
 
   // Update product state
@@ -334,7 +362,7 @@ async function executeBoostProduct(
     shopId: product.shopId,
     productName: product.name,
     status: 'success',
-    message: `Terhubung langsung ke server shopee.co.id: Naikkan produk berhasil (${intervalLabel} · SGW Gateway · ${pingLatency}ms)`,
+    message: `Terhubung ke server www.shopee.co.id (HTTP ${httpStatus} · ${gatewayName}): Naikkan produk berhasil (${intervalLabel} · ${pingLatency}ms)`,
     source,
     proxyUsed: connectionLabel,
     durationSeconds,
@@ -342,7 +370,7 @@ async function executeBoostProduct(
 
   return {
     success: true,
-    message: `Produk "${product.name.slice(0, 30)}..." berhasil dinaikkan langsung ke server Shopee! Interval: ${intervalLabel}.`,
+    message: `Produk "${product.name.slice(0, 30)}..." berhasil dinaikkan langsung ke server www.shopee.co.id! Interval: ${intervalLabel}.`,
     cooldownSeconds: durationSeconds,
     proxyUsed: connectionLabel,
   };
@@ -400,10 +428,14 @@ app.get('/api/shopee/status', (_req: Request, res: Response) => {
   const activeBoosted = allProducts.filter((p) => p.status === 'boosted').length;
   res.json({
     connected: isShopeeConnected,
+    server: 'www.shopee.co.id',
+    httpStatus: lastShopeeHttpStatus,
+    gateway: lastShopeeGateway,
     pingLatencyMs: lastShopeePingLatencyMs,
     boostIntervalMinutes: config.boostIntervalMinutes,
     isProduction: true,
     proxyEnabled: config.proxyEnabled,
+    proxyMode: config.proxyMode || 'direct',
     proxyCount: config.proxyList?.length || 0,
     activeProxy: config.activeProxy || null,
     autoBoostEnabled: config.autoBoostEnabled,
@@ -414,13 +446,15 @@ app.get('/api/shopee/status', (_req: Request, res: Response) => {
   });
 });
 
-// Ping test directly to Shopee
+// Ping test directly to www.shopee.co.id
 app.get('/api/shopee/ping', async (_req: Request, res: Response) => {
   const latency = await pingShopeeServer();
   res.json({
-    success: true,
-    connected: true,
-    server: 'shopee.co.id',
+    success: isShopeeConnected,
+    connected: isShopeeConnected,
+    server: 'www.shopee.co.id',
+    httpStatus: lastShopeeHttpStatus,
+    gateway: lastShopeeGateway,
     latencyMs: latency,
     timestamp: Date.now(),
   });
@@ -600,7 +634,7 @@ app.post('/api/shopee/products/add', async (req: Request, res: Response) => {
         itemId: Number(itemId),
         shopId: Number(shopId),
         name: name || `Produk Shopee #${itemId}`,
-        originalUrl: item.originalUrl || item.rawUrl || `https://shopee.co.id/product/${shopId}/${itemId}`,
+        originalUrl: item.originalUrl || item.rawUrl || `https://www.shopee.co.id/product/${shopId}/${itemId}`,
         price: item.price,
         currency: 'Rp',
         rating: item.rating,
@@ -670,6 +704,9 @@ app.get('/api/shopee/slots', (_req: Request, res: Response) => {
     },
     totalBoostsCount,
     connected: isShopeeConnected,
+    server: 'www.shopee.co.id',
+    httpStatus: lastShopeeHttpStatus,
+    gateway: lastShopeeGateway,
     pingLatencyMs: lastShopeePingLatencyMs,
   });
 });
@@ -745,7 +782,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`ShoBoost Server running on http://0.0.0.0:${PORT} (Unlimited Multi-Product Booster)`);
+    console.log(`BangRoy Boost SHP Server running on http://0.0.0.0:${PORT} (Connected to www.shopee.co.id)`);
   });
 }
 

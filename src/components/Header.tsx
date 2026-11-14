@@ -24,6 +24,8 @@ interface HeaderProps {
   productsCount: number;
   activeBoostedCount: number;
   pingLatencyMs?: number;
+  connected?: boolean;
+  gateway?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -38,6 +40,8 @@ export const Header: React.FC<HeaderProps> = ({
   productsCount,
   activeBoostedCount,
   pingLatencyMs = 85,
+  connected = true,
+  gateway = 'SGW',
 }) => {
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -57,11 +61,31 @@ export const Header: React.FC<HeaderProps> = ({
                   Pro Multi-Produk
                 </span>
                 {/* Live server connection badge */}
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-800 border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <Globe className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="font-bold">Terhubung Langsung: shopee.co.id</span>
-                  <span className="text-emerald-700 font-mono text-2xs font-semibold">({pingLatencyMs}ms · SGW)</span>
+                <span
+                  className={`text-xs px-2.5 py-0.5 rounded-full font-medium border flex items-center gap-1.5 shadow-2xs ${
+                    connected
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                      : 'bg-amber-50 text-amber-800 border-amber-300'
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      connected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+                    }`}
+                  />
+                  <Globe className={`w-3.5 h-3.5 ${connected ? 'text-emerald-600' : 'text-amber-600'}`} />
+                  <span className="font-bold">
+                    {connected
+                      ? 'Terhubung Langsung: www.shopee.co.id'
+                      : 'Menghubungkan ulang: www.shopee.co.id'}
+                  </span>
+                  <span
+                    className={`font-mono text-2xs font-semibold ${
+                      connected ? 'text-emerald-700' : 'text-amber-700'
+                    }`}
+                  >
+                    ({pingLatencyMs}ms · {gateway})
+                  </span>
                 </span>
                 {config.proxyEnabled && (
                   <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1.5 shadow-2xs">
