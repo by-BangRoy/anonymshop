@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Clock,
   Rocket,
@@ -7,10 +7,12 @@ import {
   RefreshCw,
   ExternalLink,
   Flame,
-  Shield,
   Zap,
-  Square,
   Layers,
+  Globe,
+  TrendingUp,
+  Pencil,
+  Check,
 } from 'lucide-react';
 import { ShopeeProduct } from '../types/shopee';
 
@@ -20,6 +22,7 @@ interface MultiProductBoostGridProps {
   onStopBoost: (productId: string) => Promise<void>;
   onDeleteProduct: (productId: string) => Promise<void>;
   onBoostAll: () => Promise<void>;
+  onUpdateKeyword?: (productId: string, keyword: string) => Promise<void>;
   isProcessing: boolean;
   intervalMinutes: number;
 }
@@ -37,11 +40,13 @@ export const MultiProductBoostGrid: React.FC<MultiProductBoostGridProps> = ({
   onStopBoost,
   onDeleteProduct,
   onBoostAll,
+  onUpdateKeyword,
   isProcessing,
   intervalMinutes,
 }) => {
+  const [editingKeywordId, setEditingKeywordId] = useState<string | null>(null);
+  const [keywordDraft, setKeywordDraft] = useState('');
   const boostedProducts = products.filter((p) => p.status === 'boosted');
-  const idleProducts = products.filter((p) => p.status !== 'boosted');
 
   return (
     <section className="space-y-3">
@@ -162,10 +167,74 @@ export const MultiProductBoostGrid: React.FC<MultiProductBoostGridProps> = ({
                     )}
                   </div>
 
-                  {product.lastProxyUsed && (
-                    <div className="flex items-center gap-1.5 text-2xs text-emerald-800 bg-emerald-50 border border-emerald-200/90 px-2 py-0.5 rounded font-mono truncate shadow-2xs">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                      <span className="truncate">{product.lastProxyUsed}</span>
+                  {/* Direct www.shopee.co.id connection status */}
+                  <div
+                    className={`flex items-center gap-1.5 text-2xs border px-2 py-0.5 rounded font-mono truncate shadow-2xs ${
+                      product.serverConnected === false
+                        ? 'text-amber-800 bg-amber-50 border-amber-200'
+                        : 'text-emerald-800 bg-emerald-50 border-emerald-200/90'
+                    }`}
+                  >
+                    <Globe
+                      className={`w-3 h-3 shrink-0 ${
+                        product.serverConnected === false ? 'text-amber-600' : 'text-emerald-600'
+                      }`}
+                    />
+                    <span className="truncate">
+                      {product.lastProxyUsed ||
+                        (product.serverConnected === false
+                          ? 'Menghubungkan www.shopee.co.id...'
+                          : 'Terhubung: www.shopee.co.id')}
+                    </span>
+                  </div>
+
+                  {/* Top Search Keyword Priority Box */}
+                  {editingKeywordId === product.id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={keywordDraft}
+                        onChange={(e) => setKeywordDraft(e.target.value)}
+                        placeholder="Kata kunci pencarian teratas..."
+                        className="flex-1 min-w-0 px-2 py-1 text-2xs bg-white border border-orange-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (onUpdateKeyword) {
+                            await onUpdateKeyword(product.id, keywordDraft);
+                          }
+                          setEditingKeywordId(null);
+                        }}
+                        className="p-1 bg-orange-600 text-white rounded hover:bg-orange-700"
+                        title="Simpan & Naikkan"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-1.5 text-2xs bg-amber-50/90 text-amber-900 border border-amber-200 px-2 py-0.5 rounded">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <TrendingUp className="w-3 h-3 text-orange-600 shrink-0" />
+                        <span className="truncate font-medium">
+                          {product.searchKeyword
+                            ? `Pencarian Teratas: "${product.searchKeyword}"`
+                            : 'Pencarian Teratas: Auto Relevansi'}
+                        </span>
+                      </div>
+                      {onUpdateKeyword && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingKeywordId(product.id);
+                            setKeywordDraft(product.searchKeyword || '');
+                          }}
+                          className="text-orange-700 hover:text-orange-900 shrink-0 p-0.5"
+                          title="Ubah kata kunci pencarian teratas"
+                        >
+                          <Pencil className="w-2.5 h-2.5" />
+                        </button>
+                      )}
                     </div>
                   )}
 

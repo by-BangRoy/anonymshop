@@ -17,6 +17,14 @@ export interface ShopeeProduct {
   totalBoostsCount: number;
   lastBoostStatus?: string;
   lastProxyUsed?: string;
+  serverConnected?: boolean;
+  serverHost?: string;
+  httpStatus?: number;
+  gateway?: string;
+  pingLatencyMs?: number;
+  searchKeyword?: string;
+  searchBoostActive?: boolean;
+  lastVerifiedAt?: number;
   addedAt: number;
 }
 
@@ -65,6 +73,13 @@ export interface ParsedLinkResult {
   shopId?: number;
   name?: string;
   originalUrl: string;
+  canonicalUrl?: string;
+  searchKeyword?: string;
+  isShortlink?: boolean;
+  connectedToShopee?: boolean;
+  httpStatus?: number;
+  gateway?: string;
+  latencyMs?: number;
   domain?: string;
   error?: string;
 }

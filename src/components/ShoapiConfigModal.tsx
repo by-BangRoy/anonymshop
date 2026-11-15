@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Globe,
@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   RotateCw,
   Clock,
-  Radio,
 } from 'lucide-react';
 import { ShoapiConfig } from '../types/shopee';
 
@@ -52,15 +51,22 @@ export const ShoapiConfigModal: React.FC<ShoapiConfigModalProps> = ({
   const [currentLatency, setCurrentLatency] = useState<number>(pingLatencyMs);
   const [serverConnected, setServerConnected] = useState<boolean>(true);
   const [serverHttpStatus, setServerHttpStatus] = useState<number>(200);
+  const wasOpenRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !wasOpenRef.current) {
       setFormData({ ...config });
       setProxyInput((config.proxyList || []).join('\n'));
       setAutoPoolCount(config.autoProxyPoolCount || 25);
-      setCurrentLatency(pingLatencyMs);
+      setSaveMessage(null);
+      setProxyTestResult(null);
     }
-  }, [isOpen, config, pingLatencyMs]);
+    wasOpenRef.current = isOpen;
+  }, [isOpen, config]);
+
+  useEffect(() => {
+    setCurrentLatency(pingLatencyMs);
+  }, [pingLatencyMs]);
 
   const handleRefreshAutoPool = async () => {
     setIsRefreshingPool(true);

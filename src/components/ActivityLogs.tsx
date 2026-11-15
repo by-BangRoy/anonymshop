@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Shield,
 } from 'lucide-react';
 import { BoostLogEntry } from '../types/shopee';
 
@@ -78,16 +77,16 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, onClearLogs })
                     <span className="font-semibold text-slate-900 line-clamp-1">
                       {entry.productName}
                     </span>
-                    <span className="text-2xs font-mono text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded">
+                    <span className="text-2xs font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
                       ID: {entry.itemId}
                     </span>
                     {typeof entry.slotNumber === 'number' && (
-                      <span className="text-2xs font-semibold px-2 py-0.2 rounded bg-orange-100 text-orange-800">
+                      <span className="text-2xs font-semibold px-2 py-0.5 rounded bg-orange-100 text-orange-800">
                         Slot {entry.slotNumber}
                       </span>
                     )}
                     <span
-                      className={`text-2xs px-2 py-0.2 rounded font-medium ${
+                      className={`text-2xs px-2 py-0.5 rounded font-medium ${
                         entry.source === 'auto'
                           ? 'bg-purple-100 text-purple-800'
                           : 'bg-blue-100 text-blue-800'
@@ -96,7 +95,7 @@ export const ActivityLogs: React.FC<ActivityLogsProps> = ({ logs, onClearLogs })
                       {entry.source === 'auto' ? 'Auto-Boost' : 'Manual Trigger'}
                     </span>
                     {entry.proxyUsed && (
-                      <span className="text-2xs px-1.5 py-0.2 rounded font-mono bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-0.5">
+                      <span className="text-2xs px-1.5 py-0.5 rounded font-mono bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-0.5">
                         <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
                         {entry.proxyUsed}
                       </span>

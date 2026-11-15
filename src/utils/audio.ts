@@ -1,3 +1,5 @@
+let sharedAudioCtx: AudioContext | null = null;
+
 /**
  * Gentle notification chime synthesized with Web Audio API
  */
@@ -5,10 +7,17 @@ export function playBoostChime() {
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
+
+    if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
+      sharedAudioCtx = new AudioContextClass();
+    }
+    const ctx = sharedAudioCtx;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
 
     const now = ctx.currentTime;
-    
+
     // Play two gentle rising tones (C5 -> G5)
     const osc1 = ctx.createOscillator();
     const osc2 = ctx.createOscillator();

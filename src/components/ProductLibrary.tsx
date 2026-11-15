@@ -5,9 +5,10 @@ import {
   Trash2,
   Rocket,
   Search,
-  Shield,
   Zap,
   Clock,
+  Globe,
+  TrendingUp,
 } from 'lucide-react';
 import { ShopeeProduct } from '../types/shopee';
 
@@ -186,14 +187,24 @@ export const ProductLibrary: React.FC<ProductLibraryProps> = ({
                     <span>Shop ID: <strong className="text-slate-700">{product.shopId}</strong></span>
                     <span>·</span>
                     <span>Total Boost: <strong className="text-slate-800">{product.totalBoostsCount || 0}x</strong></span>
-                    {product.lastProxyUsed && (
-                      <>
-                        <span>·</span>
-                        <span className="text-2xs text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded font-mono flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          {product.lastProxyUsed}
-                        </span>
-                      </>
+                    <span>·</span>
+                    <span
+                      className={`text-2xs border px-1.5 py-0.5 rounded font-mono flex items-center gap-1 ${
+                        product.serverConnected === false
+                          ? 'text-amber-800 bg-amber-50 border-amber-200'
+                          : 'text-emerald-800 bg-emerald-50 border-emerald-200'
+                      }`}
+                    >
+                      <Globe className="w-2.5 h-2.5" />
+                      {product.lastProxyUsed || 'Terhubung: www.shopee.co.id'}
+                    </span>
+                    {product.searchBoostActive && (
+                      <span className="text-2xs text-orange-800 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded font-medium flex items-center gap-1">
+                        <TrendingUp className="w-2.5 h-2.5 text-orange-600" />
+                        {product.searchKeyword
+                          ? `Pencarian Teratas: "${product.searchKeyword}"`
+                          : 'Pencarian Teratas Aktif'}
+                      </span>
                     )}
                   </div>
 

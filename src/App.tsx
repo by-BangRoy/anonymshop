@@ -12,7 +12,7 @@ import {
   ShoapiConfig,
   BoostLogEntry,
 } from './types/shopee';
-import { Layers, Flame, Zap, Globe, Clock, ShieldCheck } from 'lucide-react';
+import { Layers, Flame, Zap, Globe } from 'lucide-react';
 
 export default function App() {
   const [products, setProducts] = useState<ShopeeProduct[]>([]);
@@ -118,6 +118,7 @@ export default function App() {
     itemId: number;
     shopId: number;
     name: string;
+    searchKeyword?: string;
   }) => {
     setIsProcessing(true);
     try {
@@ -151,6 +152,7 @@ export default function App() {
       itemId: number;
       shopId: number;
       name: string;
+      searchKeyword?: string;
     }>,
     autoBoost: boolean
   ) => {
@@ -166,6 +168,25 @@ export default function App() {
         throw new Error(data.error || 'Gagal menyimpan produk');
       }
       if (autoBoost && config.notificationSound) {
+        playBoostChime();
+      }
+      await fetchState();
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Update target top-search keyword for a product and boost immediately
+  const handleUpdateSearchKeyword = async (productId: string, searchKeyword: string) => {
+    setIsProcessing(true);
+    try {
+      const res = await fetch('/api/shopee/products/update-keyword', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, searchKeyword, triggerBoost: true }),
+      });
+      const data = await res.json();
+      if (data.success && config.notificationSound) {
         playBoostChime();
       }
       await fetchState();
@@ -245,6 +266,17 @@ export default function App() {
       await fetchState();
     } catch (err) {
       console.warn('Gagal mengosongkan produk:', err);
+    }
+  };
+
+  // Clear boost activity logs on both server and UI
+  const handleClearLogs = async () => {
+    setLogs([]);
+    try {
+      await fetch('/api/shopee/logs/clear', { method: 'POST' });
+      await fetchState();
+    } catch (err) {
+      console.warn('Gagal membersihkan log:', err);
     }
   };
 
@@ -348,7 +380,7 @@ export default function App() {
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl font-black text-emerald-700">{totalBoostsCount}x</span>
-              <span className="text-2xs text-emerald-700 font-semibold px-1.5 py-0.2 rounded bg-emerald-50 border border-emerald-200">
+              <span className="text-2xs text-emerald-700 font-semibold px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200">
                 Auto Re-Boost
               </span>
             </div>
@@ -407,6 +439,7 @@ export default function App() {
           onStopBoost={handleStopBoost}
           onDeleteProduct={handleDeleteProduct}
           onBoostAll={handleBoostAll}
+          onUpdateKeyword={handleUpdateSearchKeyword}
           isProcessing={isProcessing}
           intervalMinutes={config.boostIntervalMinutes}
         />
@@ -426,7 +459,7 @@ export default function App() {
           </div>
 
           <div className="lg:col-span-1">
-            <ActivityLogs logs={logs} onClearLogs={() => setLogs([])} />
+            <ActivityLogs logs={logs} onClearLogs={handleClearLogs} />
           </div>
         </div>
       </main>

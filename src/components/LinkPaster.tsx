@@ -9,6 +9,9 @@ import {
   Layers,
   ArrowRight,
   Zap,
+  Globe,
+  TrendingUp,
+  Loader2,
 } from 'lucide-react';
 import { parseShopeeUrl, parseMultipleShopeeUrls } from '../utils/shopeeParser';
 import { ParsedLinkResult } from '../types/shopee';
@@ -19,6 +22,7 @@ interface LinkPasterProps {
     itemId: number;
     shopId: number;
     name: string;
+    searchKeyword?: string;
   }) => Promise<void>;
   onAddProducts: (
     items: Array<{
@@ -26,6 +30,7 @@ interface LinkPasterProps {
       itemId: number;
       shopId: number;
       name: string;
+      searchKeyword?: string;
     }>,
     autoBoost: boolean
   ) => Promise<void>;
@@ -41,17 +46,65 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [batchValue, setBatchValue] = useState('');
   const [parsedSingle, setParsedSingle] = useState<ParsedLinkResult | null>(null);
+  const [targetKeyword, setTargetKeyword] = useState('');
+  const [isVerifyingLink, setIsVerifyingLink] = useState(false);
   const [batchResults, setBatchResults] = useState<ParsedLinkResult[]>([]);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Live parse single input
+  // Live parse & verify single input directly against www.shopee.co.id
   useEffect(() => {
-    if (!inputValue.trim()) {
+    const trimmed = inputValue.trim();
+    if (!trimmed) {
       setParsedSingle(null);
+      setTargetKeyword('');
+      setIsVerifyingLink(false);
       return;
     }
-    const res = parseShopeeUrl(inputValue.trim());
-    setParsedSingle(res);
+
+    const localParsed = parseShopeeUrl(trimmed);
+    setParsedSingle(localParsed);
+    setTargetKeyword(localParsed.searchKeyword || '');
+
+    if (!localParsed.valid) {
+      setIsVerifyingLink(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsVerifyingLink(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/shopee/parse-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: trimmed }),
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.result) {
+            setParsedSingle(data.result);
+            if (data.result.searchKeyword) {
+              setTargetKeyword((prev) => prev || data.result.searchKeyword);
+            }
+          }
+        }
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          console.warn('Verifikasi link ke www.shopee.co.id tertunda:', err);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsVerifyingLink(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [inputValue]);
 
   // Live parse batch input
@@ -86,7 +139,7 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
     }
   };
 
-  // Submit single product with immediate boost
+  // Submit single product with immediate boost & top-search priority
   const handleBoostImmediately = async () => {
     if (!parsedSingle || !parsedSingle.valid || !parsedSingle.itemId || !parsedSingle.shopId) {
       setStatusMessage({ type: 'error', text: 'Masukkan link produk Shopee yang valid terlebih dahulu' });
@@ -100,12 +153,14 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
         itemId: parsedSingle.itemId,
         shopId: parsedSingle.shopId,
         name: parsedSingle.name || `Produk Shopee #${parsedSingle.itemId}`,
+        searchKeyword: targetKeyword.trim() || undefined,
       });
       setInputValue('');
       setParsedSingle(null);
+      setTargetKeyword('');
       setStatusMessage({
         type: 'success',
-        text: 'Link produk berhasil didaftarkan dan langsung dinaikkan ke server Shopee!',
+        text: 'Link produk terhubung langsung ke www.shopee.co.id & prioritas pencarian teratas aktif!',
       });
       setTimeout(() => setStatusMessage(null), 5000);
     } catch (err: any) {
@@ -114,7 +169,7 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
     }
   };
 
-  // Submit single product to list only
+  // Submit single product to list only (still verifies live connection to www.shopee.co.id)
   const handleAddToListOnly = async () => {
     if (!parsedSingle || !parsedSingle.valid || !parsedSingle.itemId || !parsedSingle.shopId) {
       return;
@@ -128,13 +183,18 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
             itemId: parsedSingle.itemId,
             shopId: parsedSingle.shopId,
             name: parsedSingle.name || `Produk #${parsedSingle.itemId}`,
+            searchKeyword: targetKeyword.trim() || undefined,
           },
         ],
         false
       );
       setInputValue('');
       setParsedSingle(null);
-      setStatusMessage({ type: 'success', text: 'Produk berhasil ditambahkan ke daftar booster.' });
+      setTargetKeyword('');
+      setStatusMessage({
+        type: 'success',
+        text: 'Produk terhubung ke www.shopee.co.id dan tersimpan di daftar booster.',
+      });
       setTimeout(() => setStatusMessage(null), 4000);
     } catch (err: any) {
       setStatusMessage({ type: 'error', text: err?.message || 'Gagal menyimpan produk' });
@@ -151,6 +211,7 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
         itemId: r.itemId!,
         shopId: r.shopId!,
         name: r.name || `Produk Shopee #${r.itemId}`,
+        searchKeyword: r.searchKeyword || undefined,
       }));
 
     if (validItems.length === 0) {
@@ -167,8 +228,8 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
       setStatusMessage({
         type: 'success',
         text: autoBoostAll
-          ? `Berhasil mendaftarkan dan langsung menaikkan ${count} produk sekaligus ke server Shopee!`
-          : `Berhasil menambahkan ${count} produk ke dalam daftar booster!`,
+          ? `Berhasil menghubungkan & menaikkan ${count} produk sekaligus ke server www.shopee.co.id!`
+          : `Berhasil menghubungkan & menyimpan ${count} produk ke dalam daftar booster!`,
       });
       setTimeout(() => setStatusMessage(null), 5000);
     } catch (err: any) {
@@ -188,11 +249,11 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
                 <Rocket className="w-4 h-4" />
               </span>
               <h2 className="text-base font-bold text-slate-900">
-                Tempel Link Produk Shopee (Bisa Banyak Produk)
+                Tempel Link Produk Shopee (Langsung ke www.shopee.co.id)
               </h2>
             </div>
             <p className="text-xs text-slate-600 mt-1">
-              Bisa menaikkan banyak produk sekaligus tanpa dibatasi hanya 5 produk. Tempel link tunggal atau kumpulan banyak link sekaligus.
+              Setiap link yang ditempel langsung diverifikasi ke server www.shopee.co.id dan didorong dengan sinyal relevansi pencarian teratas tanpa batasan jumlah produk.
             </p>
           </div>
 
@@ -270,7 +331,7 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
               </button>
             </div>
 
-            {/* Live Detected Preview Card */}
+            {/* Live Detected Preview Card with Direct www.shopee.co.id Connection Check */}
             {parsedSingle && (
               <div
                 className={`p-3.5 rounded-lg border transition-all ${
@@ -280,52 +341,83 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
                 }`}
               >
                 {parsedSingle.valid ? (
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Link Shopee Valid
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          Domain: {parsedSingle.domain}
-                        </span>
+                  <div className="space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Link Shopee Valid
+                          </span>
+
+                          {isVerifyingLink ? (
+                            <span className="inline-flex items-center gap-1 text-2xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Menghubungkan ke www.shopee.co.id...
+                            </span>
+                          ) : parsedSingle.connectedToShopee ? (
+                            <span className="inline-flex items-center gap-1 text-2xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded">
+                              <Globe className="w-3 h-3 text-emerald-600" />
+                              Terhubung ke www.shopee.co.id (HTTP {parsedSingle.httpStatus} · {parsedSingle.gateway || 'SGW'} · {parsedSingle.latencyMs}ms)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-2xs text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded">
+                              <Globe className="w-3 h-3 text-orange-500" />
+                              Target: www.shopee.co.id
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="text-sm font-semibold text-slate-900 line-clamp-1">
+                          {parsedSingle.name}
+                        </h4>
+                        <div className="flex items-center gap-3 text-xs text-slate-600">
+                          <span>
+                            Item ID: <strong className="text-slate-800">{parsedSingle.itemId}</strong>
+                          </span>
+                          <span>·</span>
+                          <span>
+                            Shop ID: <strong className="text-slate-800">{parsedSingle.shopId}</strong>
+                          </span>
+                        </div>
                       </div>
-                      <h4 className="text-sm font-semibold text-slate-900 line-clamp-1">
-                        {parsedSingle.name}
-                      </h4>
-                      <div className="flex items-center gap-3 text-xs text-slate-600">
-                        <span>
-                          Item ID: <strong className="text-slate-800">{parsedSingle.itemId}</strong>
-                        </span>
-                        <span>·</span>
-                        <span>
-                          Shop ID: <strong className="text-slate-800">{parsedSingle.shopId}</strong>
-                        </span>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={handleAddToListOnly}
+                          disabled={isProcessing}
+                          className="px-3 py-2 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg shadow-2xs transition-colors flex items-center gap-1.5"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Simpan Saja</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleBoostImmediately}
+                          disabled={isProcessing}
+                          className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 rounded-lg shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          <Rocket className="w-3.5 h-3.5" />
+                          <span>Tempel & Naikkan Sekarang</span>
+                        </button>
                       </div>
                     </div>
 
-                    {/* Action Buttons (No slot limits!) */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={handleAddToListOnly}
-                        disabled={isProcessing}
-                        className="px-3 py-2 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg shadow-2xs transition-colors flex items-center gap-1.5"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Simpan Saja</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleBoostImmediately}
-                        disabled={isProcessing}
-                        className="px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 rounded-lg shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50"
-                      >
-                        <Rocket className="w-3.5 h-3.5" />
-                        <span>Tempel & Naikkan Sekarang</span>
-                      </button>
+                    {/* Top Search Target Keyword Input */}
+                    <div className="pt-2 border-t border-amber-200/70 flex flex-col sm:flex-row sm:items-center gap-2">
+                      <label className="text-2xs font-semibold text-slate-700 flex items-center gap-1.5 shrink-0">
+                        <TrendingUp className="w-3.5 h-3.5 text-orange-600" />
+                        <span>Kata Kunci Pencarian Teratas:</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={targetKeyword}
+                        onChange={(e) => setTargetKeyword(e.target.value)}
+                        placeholder="Contoh: Sepatu Sneakers Pria Casual (otomatis dari judul produk jika kosong)"
+                        className="flex-1 px-2.5 py-1.5 bg-white border border-amber-300 rounded-md text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      />
                     </div>
                   </div>
                 ) : (
@@ -358,7 +450,7 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
                 rows={5}
                 value={batchValue}
                 onChange={(e) => setBatchValue(e.target.value)}
-                placeholder="https://www.shopee.co.id/...-i.12345.67890&#10;https://www.shopee.co.id/...-i.12345.67891&#10;https://www.shopee.co.id/...-i.12345.67892&#10;https://www.shopee.co.id/...-i.12345.67893&#10;https://www.shopee.co.id/...-i.12345.67894&#10;https://www.shopee.co.id/...-i.12345.67895&#10;https://www.shopee.co.id/...-i.12345.67896"
+                placeholder="https://www.shopee.co.id/...-i.12345.67890&#10;https://www.shopee.co.id/...-i.12345.67891&#10;https://www.shopee.co.id/...-i.12345.67892&#10;https://www.shopee.co.id/...-i.12345.67893&#10;https://www.shopee.co.id/...-i.12345.67894"
                 className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
             </div>
@@ -372,7 +464,7 @@ export const LinkPaster: React.FC<LinkPasterProps> = ({
                     Terdeteksi: {batchResults.filter((r) => r.valid).length} link produk Shopee valid.
                   </p>
                   <p className="text-slate-500">
-                    Semua produk ini bisa langsung dinaikkan bersamaan ke server Shopee tanpa batasan slot.
+                    Seluruh link akan langsung dihubungkan ke server www.shopee.co.id dan didorong ke pencarian teratas.
                   </p>
                 </div>
 

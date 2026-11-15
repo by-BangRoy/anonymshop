@@ -15,10 +15,66 @@ function cleanSlug(slug: string): string {
 }
 
 /**
+ * Extracts clean top-search keyword tokens from a product title
+ */
+export function deriveSearchKeyword(name?: string): string {
+  if (!name) return '';
+  const trimmed = name.trim();
+  if (
+    !trimmed ||
+    trimmed === 'Produk Shopee' ||
+    trimmed.startsWith('Produk Shopee #') ||
+    trimmed.startsWith('Produk #') ||
+    trimmed.startsWith('Produk Shopee (')
+  ) {
+    return '';
+  }
+  const words = trimmed
+    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 1)
+    .slice(0, 6);
+  return words.join(' ').trim();
+}
+
+/**
+ * Normalizes any shopee.co.id URL to https://www.shopee.co.id/...
+ */
+export function canonicalizeShopeeUrl(inputUrl: string, shopId?: number, itemId?: number): string {
+  if (inputUrl.startsWith('http')) {
+    try {
+      const parsed = new URL(inputUrl);
+      if (parsed.hostname === 'shopee.co.id' || parsed.hostname === 'm.shopee.co.id') {
+        parsed.hostname = 'www.shopee.co.id';
+      }
+      parsed.protocol = 'https:';
+      return parsed.toString();
+    } catch {
+      // fall through
+    }
+  }
+  if (shopId && itemId) {
+    return `https://www.shopee.co.id/product/${shopId}/${itemId}`;
+  }
+  return inputUrl;
+}
+
+/**
+ * Extracts the first HTTP(S) URL if user pasted a full Shopee share message
+ */
+function extractUrlFromText(raw: string): string {
+  const urlMatch = raw.match(/https?:\/\/[^\s"'<>]+/i);
+  if (urlMatch) {
+    return urlMatch[0].replace(/[),.;!?]+$/, '');
+  }
+  return raw.trim();
+}
+
+/**
  * Parses a single Shopee URL or product identifier
  */
 export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
-  const input = rawInput.trim();
+  const input = extractUrlFromText(rawInput.trim());
   if (!input) {
     return { valid: false, originalUrl: input, error: 'Link kosong' };
   }
@@ -29,8 +85,7 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
     if (standardMatch) {
       const shopId = parseInt(standardMatch[1], 10);
       const itemId = parseInt(standardMatch[2], 10);
-      
-      // Extract title from slug if present
+
       let title = '';
       try {
         const urlObj = input.startsWith('http') ? new URL(input) : new URL(`https://www.shopee.co.id/${input}`);
@@ -47,12 +102,17 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
         }
       }
 
+      const finalName = title && title !== 'Produk Shopee' ? title : `Produk Shopee #${itemId}`;
+      const canonicalUrl = canonicalizeShopeeUrl(input, shopId, itemId);
+
       return {
         valid: true,
         shopId,
         itemId,
-        name: title && title !== 'Produk Shopee' ? title : `Produk Shopee #${itemId}`,
-        originalUrl: input.startsWith('http') ? input : `https://www.shopee.co.id/product/${shopId}/${itemId}`,
+        name: finalName,
+        originalUrl: canonicalUrl,
+        canonicalUrl: `https://www.shopee.co.id/product/${shopId}/${itemId}`,
+        searchKeyword: deriveSearchKeyword(finalName),
         domain: 'www.shopee.co.id',
       };
     }
@@ -62,12 +122,15 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
     if (productPathMatch) {
       const shopId = parseInt(productPathMatch[1], 10);
       const itemId = parseInt(productPathMatch[2], 10);
+      const canonicalUrl = canonicalizeShopeeUrl(input, shopId, itemId);
       return {
         valid: true,
         shopId,
         itemId,
         name: `Produk Shopee #${itemId}`,
-        originalUrl: input.startsWith('http') ? input : `https://www.shopee.co.id/product/${shopId}/${itemId}`,
+        originalUrl: canonicalUrl,
+        canonicalUrl: `https://www.shopee.co.id/product/${shopId}/${itemId}`,
+        searchKeyword: '',
         domain: 'www.shopee.co.id',
       };
     }
@@ -79,12 +142,15 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
       if (itemMatch) {
         const itemId = parseInt(itemMatch[1], 10);
         const shopId = shopMatch ? parseInt(shopMatch[1], 10) : 0;
+        const canonicalUrl = canonicalizeShopeeUrl(input, shopId, itemId);
         return {
           valid: true,
           shopId,
           itemId,
           name: `Produk Shopee #${itemId}`,
-          originalUrl: input,
+          originalUrl: canonicalUrl,
+          canonicalUrl: shopId ? `https://www.shopee.co.id/product/${shopId}/${itemId}` : canonicalUrl,
+          searchKeyword: '',
           domain: 'www.shopee.co.id',
         };
       }
@@ -95,32 +161,38 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
     if (rawMatch) {
       const shopId = parseInt(rawMatch[1], 10);
       const itemId = parseInt(rawMatch[2], 10);
+      const canonical = `https://www.shopee.co.id/product/${shopId}/${itemId}`;
       return {
         valid: true,
         shopId,
         itemId,
         name: `Produk #${itemId}`,
-        originalUrl: `https://www.shopee.co.id/product/${shopId}/${itemId}`,
+        originalUrl: canonical,
+        canonicalUrl: canonical,
+        searchKeyword: '',
         domain: 'www.shopee.co.id',
       };
     }
 
-    // 5. Shortlink (shp.ee / shope.ee) without resolved ID
-    if (/shpe?\.ee\/[a-zA-Z0-9]+/i.test(input)) {
-      // Create a deterministic identifier from the shortlink hash for demo / tracking
-      const hash = input.split('/').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'item';
+    // 5. Shortlinks: s.shopee.co.id / id.shp.ee / shp.ee / shope.ee
+    if (/(?:s\.shopee\.co\.id|id\.shp\.ee|shpe?\.ee)\/[a-zA-Z0-9_-]+/i.test(input)) {
+      const hash = input.split('?')[0].split('/').pop()?.replace(/[^a-zA-Z0-9_-]/g, '') || 'item';
       let numericId = 0;
       for (let i = 0; i < hash.length; i++) {
         numericId = (numericId * 31 + hash.charCodeAt(i)) % 900000000;
       }
       const itemId = 100000000 + Math.abs(numericId);
+      const fullShortUrl = input.startsWith('http') ? input : `https://${input}`;
       return {
         valid: true,
         shopId: 10420192,
         itemId,
         name: `Produk Shopee (${hash.toUpperCase()})`,
-        originalUrl: input,
-        domain: 'shp.ee',
+        originalUrl: fullShortUrl,
+        canonicalUrl: fullShortUrl,
+        isShortlink: true,
+        searchKeyword: '',
+        domain: 'www.shopee.co.id',
       };
     }
 
@@ -145,26 +217,27 @@ export function parseShopeeUrl(rawInput: string): ParsedLinkResult {
 export function parseMultipleShopeeUrls(rawText: string): ParsedLinkResult[] {
   if (!rawText) return [];
 
-  // Split by newlines, commas, or semicolons
   const lines = rawText
     .split(/[\r\n,;]+/)
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const results: ParsedLinkResult[] = [];
-  const seenItemIds = new Set<number>();
+  const validResults: ParsedLinkResult[] = [];
+  const invalidResults: ParsedLinkResult[] = [];
+  const seenKeys = new Set<string>();
 
   for (const line of lines) {
     const parsed = parseShopeeUrl(line);
     if (parsed.valid && parsed.itemId) {
-      if (!seenItemIds.has(parsed.itemId)) {
-        seenItemIds.add(parsed.itemId);
-        results.push(parsed);
+      const key = parsed.isShortlink ? parsed.originalUrl : String(parsed.itemId);
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        validResults.push(parsed);
       }
-    } else if (!parsed.valid && line.length > 5) {
-      results.push(parsed);
+    } else if (!parsed.valid && (/https?:\/\//i.test(line) || /\d{5,}/.test(line))) {
+      invalidResults.push(parsed);
     }
   }
 
-  return results;
+  return validResults.length > 0 ? validResults : invalidResults;
 }
